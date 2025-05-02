@@ -1,0 +1,8 @@
+{
+    "max memories": {
+        "type": "int",
+        "description": "最大记忆数量",
+        "hint": "设置允许的最大记忆数量，默认为100",
+        "default": 100
+    }
+}
