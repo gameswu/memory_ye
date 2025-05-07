@@ -337,16 +337,24 @@ class MyPlugin(Star):
         if not user_id:
             message = "无法获取用户ID。"
             logger.info(message)
+            yield event.plain_result(message)
             
         # 检查是否存在该用户的记忆文件
         memory_file = os.path.join(self.data_dir, f"{user_id}.json")
         if not os.path.exists(memory_file):
-            message = "没有找到相关的记忆。"
+            message = "暂时没有记忆。"
             logger.info(message)
+            yield event.plain_result(message)
         
         # 读取现有的记忆
         with open(memory_file, "r") as f:
             data = json.load(f)
+        
+        # 检查是否有记忆内容
+        if not data.get("memory", []):
+            message = "暂时没有记忆。"
+            logger.info(message)
+            yield event.plain_result(message)
         
         response = f"用户{user_id}导出的记忆内容：\n"
         for memory in data.get("memory", []):
