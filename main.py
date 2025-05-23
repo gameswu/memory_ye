@@ -329,9 +329,10 @@ class MyPlugin(Star):
         logger.info(message)
         
     @filter.command("导出记忆")
-    async def export_memory_command(self, event: AstrMessageEvent):
+    async def export_memory_command(self, event: AstrMessageEvent, keyword: str = None):
         """
         命令行接口，导出记忆
+        如果提供了keyword参数，则只导出与该关键词相关的记忆
         """
         user_id = event.get_sender_id()
         if not user_id:
@@ -345,10 +346,11 @@ class MyPlugin(Star):
             message = "暂时没有记忆。"
             logger.info(message)
             yield event.plain_result(message)
+        else:
         
-        # 读取现有的记忆
-        with open(memory_file, "r") as f:
-            data = json.load(f)
+            # 读取现有的记忆
+            with open(memory_file, "r") as f:
+                data = json.load(f)
         
         # 检查是否有记忆内容
         if not data.get("memory", []):
@@ -356,11 +358,30 @@ class MyPlugin(Star):
             logger.info(message)
             yield event.plain_result(message)
         
-        response = f"用户{user_id}导出的记忆内容：\n"
-        for memory in data.get("memory", []):
+        memories_to_display = []
+        
+        # 如果提供了关键词，则使用搜索功能筛选记忆
+        if keyword:
+            search_results = await self._search_memory(user_id, keyword)
+            if not search_results:
+                message = f"未找到与关键词'{keyword}'相关的记忆。"
+                logger.info(message)
+                yield event.plain_result(message)
+                
+            # 获取匹配的记忆ID列表
+            matched_ids = [item["id"] for item in search_results]
+            # 筛选原始记忆中匹配的内容
+            memories_to_display = [m for m in data.get("memory", []) if m["id"] in matched_ids]
+            response = f"用户{user_id}与关键词'{keyword}'相关的记忆内容：\n"
+        else:
+            # 不提供关键词时，显示所有记忆
+            memories_to_display = data.get("memory", [])
+            response = f"用户{user_id}导出的所有记忆内容：\n"
+        
+        for memory in memories_to_display:
             # 将时间戳转换为yyyy-mm-dd hh:mm:ss格式
             formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(memory['time']))
-            response += f"时间: {formatted_time}, 内容: {memory['content']}, 重要性: {memory['importance']}\n"
+            response += f"ID: {memory['id']}, 时间: {formatted_time}, 内容: {memory['content']}, 重要性: {memory['importance']}\n"
         
         yield event.plain_result(response)
 
